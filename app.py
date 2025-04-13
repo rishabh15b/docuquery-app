@@ -43,7 +43,18 @@ if uploaded_files:
     st.sidebar.success(f"✅ Uploaded {len(uploaded_files)} PDF(s)")
 
 # Main App Layout
-st.title("🦙📄 Chat with Your PDFs using Ollama")
+st.title("🦙📄 DOCQuery")
+
+# Provide Sample Questions Section on Main Page
+st.markdown("### 💡 Sample Questions You Can Ask")
+st.markdown("""
+Here are some examples of questions you can ask about your uploaded PDFs:
+- **Who is the author of this document?**
+- **What are the key points discussed in the document?**
+- **Summarize this document in a few sentences.**
+- **List important keywords or topics from this document.**
+- **Extract contact details like email or phone number from this document.**
+""")
 
 # Load or Create Vector Store
 db = None
@@ -60,7 +71,7 @@ if pdf_paths:
 else:
     try:
         db = load_store(VECTOR_DIR)
-        st.success("✅ Loaded existing vector store.")
+        # st.success("✅ Loaded existing vector store.")
     except FileNotFoundError:
         st.warning("⚠️ Please upload at least one PDF to begin.")
         st.stop()
@@ -125,3 +136,8 @@ if st.session_state.history:
             )
         else:
             st.sidebar.warning("No history to export.")
+# Cleanup uploaded files after processing
+if os.path.exists(UPLOAD_DIR):
+    shutil.rmtree(UPLOAD_DIR)
+    st.sidebar.success("✅ Uploaded files cleaned up.")
+                  
