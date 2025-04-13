@@ -30,16 +30,18 @@
 
 ## 📂 Project Structure
 
-├── app.py # Main application file
-├── utils/
-│ ├── pdf_loader.py # Functions for loading PDFs
-│ ├── chunking.py # Document chunking logic
-│ ├── vector_store.py # Vector store creation and loading
-│ ├── prompt_router.py # Dynamic prompt generation
-│ ├── qa_chain.py # QA chain setup
-├── uploaded_pdfs/ # Directory for uploaded PDFs
-├── my_faiss_index/ # Directory for vector store
-└── README.md # Project documentation
+```
+├── app.py                # Main application file
+├── utils/                # Utility scripts for core functionalities
+│   ├── pdf_loader.py     # Functions for loading and parsing PDFs
+│   ├── chunking.py       # Logic for splitting documents into chunks
+│   ├── vector_store.py   # Functions for creating and managing the vector store
+│   ├── prompt_router.py  # Handles dynamic prompt generation based on query type
+│   ├── qa_chain.py       # Sets up the question-answering chain
+├── uploaded_pdfs/        # Directory for storing uploaded PDF files
+├── my_faiss_index/       # Directory for storing the FAISS vector index
+└── README.md             # Project documentation
+```
 
 ---
 
