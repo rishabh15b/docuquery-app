@@ -53,7 +53,7 @@
 ### Steps to Set Up the Project
 
 1. Clone the repository:
-git clone https://github.com/<your_username>/docuquery.git
+git clone https://github.com/rishabh15b/docuquery.git
 cd docuquery
 
 2. Create a virtual environment:
