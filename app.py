@@ -16,7 +16,7 @@ if 'history' not in st.session_state:
     st.session_state.history = []
 
 # Streamlit Page Config
-st.set_page_config(page_title="📄 RAG PDF Chat", layout="wide")
+st.set_page_config(page_title="📄 DOCQuery", layout="wide")
 
 # Sidebar for Uploads and Info
 with st.sidebar:
