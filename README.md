@@ -2,6 +2,8 @@
 
 **DocuQuery** is a powerful **Retrieval-Augmented Generation (RAG)** application built using **LangChain**, **Streamlit**, and **Ollama**, enabling users to interact with their uploaded PDFs through natural language queries. With advanced AI capabilities, DocuQuery provides accurate answers, summaries, and insights based on document content.
 
+![image](https://github.com/user-attachments/assets/1bac008a-70f7-468e-a8ba-e35fd43ca1f0)
+
 ---
 
 ## 🚀 Features
@@ -129,7 +131,7 @@ This project is licensed under the MIT License.
 
 ## 👨‍💻 Author
 
-Developed by [Your Name](https://github.com/<your_username>). Feel free to reach out for questions or collaboration opportunities!
+Developed by [Rishabh Balaiwar](https://github.com/rishabh15b). Feel free to reach out for questions or collaboration opportunities!
 
 ---
 
