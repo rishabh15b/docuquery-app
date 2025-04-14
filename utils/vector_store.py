@@ -6,7 +6,7 @@ def create_store(docs, persist_dir="my_faiss_index"):
     embeddings = OllamaEmbeddings(model="mistral")
     if os.path.exists(persist_dir):
         db = FAISS.load_local(persist_dir, embeddings, allow_dangerous_deserialization=True)
-        db.add_documents(docs)  # Incrementally update vector store
+        db.add_documents(docs)
     else:
         db = FAISS.from_documents(docs, embeddings)
     db.save_local(persist_dir)
