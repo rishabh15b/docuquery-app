@@ -25,7 +25,7 @@ with st.sidebar:
     uploaded_files = st.file_uploader("Select one or more PDF files", type=["pdf"], accept_multiple_files=True)
     st.markdown("---")
     st.markdown("🧠 This app uses a Retrieval-Augmented Generation (RAG) pipeline powered by Ollama to answer questions based on your uploaded documents.")
-    st.markdown("💡 Tip: Ask questions like 'Who is the author of this document?' or 'What are the key points of the document?'")
+    # st.markdown("💡 Tip: Ask questions like 'Who is the author of this document?' or 'What are the key points of the document?'")
 
     # Sidebar for Chunking Settings
     st.header("⚙️ Chunking Settings")
