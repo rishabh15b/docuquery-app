@@ -1,16 +1,25 @@
+import fitz  # PyMuPDF
 from textblob import TextBlob
 
-def analyze_sentiment(file_paths):
-    sentiments = []
+def analyze_sentiment_by_page(file_paths):
+    all_results = []
+
     for path in file_paths:
-        try:
-            with open(path, "r") as f:
-                text_content = f.read()
-                blob = TextBlob(text_content)
-                sentiments.append({
-                    "polarity": blob.sentiment.polarity,
-                    "subjectivity": blob.sentiment.subjectivity,
-                })
-        except Exception as e:
-            print(f"Error processing file {path}: {e}")
-    return sentiments
+        doc = fitz.open(path)
+        results = []
+
+        for i, page in enumerate(doc):
+            text = page.get_text()
+            blob = TextBlob(text)
+            results.append({
+                "page": i + 1,
+                "polarity": blob.sentiment.polarity,
+                "subjectivity": blob.sentiment.subjectivity
+            })
+
+        all_results.append({
+            "file": path,
+            "pages": results
+        })
+
+    return all_results

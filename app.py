@@ -1,164 +1,209 @@
+# ✅ Full app.py Refactor for Better UI/UX
+
 import streamlit as st
 import os
 import shutil
+import pandas as pd
+from PIL import Image
+import io
+import matplotlib.pyplot as plt
+
 from utils.pdf_loader import load_all_pdfs, extract_metadata, extract_tables, extract_charts
 from utils.chunking import split_docs
 from utils.vector_store import create_store, load_store
 from utils.prompt_router import get_smart_prompt
 from utils.rag_chain import get_qa_chain
-from utils.sentiment_analysis import analyze_sentiment
+from utils.sentiment_analysis import analyze_sentiment_by_page
+from utils.pdf_highlight import find_snippet_location, render_highlighted_page
 
-# Constants
 UPLOAD_DIR = "uploaded_pdfs"
 VECTOR_DIR = "my_faiss_index"
 
-# Initialize history in session state if not already done
 if 'history' not in st.session_state:
     st.session_state.history = []
+if 'db' not in st.session_state:
+    st.session_state.db = None
+if 'visited' not in st.session_state:
+    st.session_state.visited = False
 
-# Streamlit Page Config
-st.set_page_config(page_title="📄 DOCQuery Enhanced", layout="wide")
+st.set_page_config(page_title="📄 DocuQuery", layout="wide")
 
-# Sidebar for Uploads and Settings
+# 👋 Onboarding Message
+if not st.session_state.visited:
+    with st.expander("👋 Welcome to DocuQuery", expanded=True):
+        st.markdown("""
+        Upload your PDFs and ask natural questions. DocuQuery will use AI to find answers,
+        extract data, analyze tone, and more.
+        
+        **Example questions:**
+        - What is the document about?
+        - Who authored this?
+        - Summarize the content.
+        """)
+    st.session_state.visited = True
+
+# Sidebar Inputs
 with st.sidebar:
     st.header("📁 Upload PDF Files")
-    uploaded_files = st.file_uploader("Select one or more PDF files", type=["pdf"], accept_multiple_files=True)
+    uploaded_files = st.file_uploader("Select PDF(s)", type=["pdf"], accept_multiple_files=True)
     st.markdown("---")
-    st.markdown("🧠 This app uses a Retrieval-Augmented Generation (RAG) pipeline powered by Ollama to answer questions based on your uploaded documents.")
-    # st.markdown("💡 Tip: Ask questions like 'Who is the author of this document?' or 'What are the key points of the document?'")
 
-    # Sidebar for Chunking Settings
     st.header("⚙️ Chunking Settings")
-    chunk_size = st.slider("Chunk Size", min_value=500, max_value=2000, value=1000, step=100)
-    overlap = st.slider("Chunk Overlap", min_value=0, max_value=500, value=200, step=50)
+    chunk_size = st.slider("Chunk Size", 500, 2000, 1000, 100)
+    overlap = st.slider("Chunk Overlap", 0, 500, 200, 50)
 
-    # Sidebar for Analysis Features
-    st.header("📊 Document Analysis Features")
-    analyze_tables = st.checkbox("Extract Tables")
-    analyze_charts = st.checkbox("Extract Charts")
-    # perform_sentiment_analysis = st.checkbox("Perform Sentiment Analysis")
+    st.header("🧠 Analysis Options")
+    analyze_tables = st.checkbox("📊 Extract Tables")
+    analyze_charts = st.checkbox("📈 Extract Charts")
+    perform_sentiment_analysis = st.checkbox("🧠 Sentiment Analysis")
+    enable_visual_qa = st.checkbox("🖍️ Visual Highlighting", value=True)
 
-# Save uploaded files permanently
+    if st.button("🧹 Clear Uploaded Files"):
+        shutil.rmtree(UPLOAD_DIR, ignore_errors=True)
+        st.success("Cleared uploaded files.")
+
+# Handle Uploads
 pdf_paths = []
 if uploaded_files:
     os.makedirs(UPLOAD_DIR, exist_ok=True)
     for file in uploaded_files:
-        file_path = os.path.join(UPLOAD_DIR, file.name)
-        with open(file_path, "wb") as f:
+        path = os.path.join(UPLOAD_DIR, file.name)
+        with open(path, "wb") as f:
             f.write(file.getbuffer())
-        pdf_paths.append(file_path)
-    st.sidebar.success(f"✅ Uploaded {len(uploaded_files)} PDF(s)")
+        pdf_paths.append(path)
+    st.sidebar.success(f"Uploaded {len(uploaded_files)} file(s).")
 
-# Main App Layout
-st.title("🦙📄 DOCQuery Enhanced")
+# Title
+st.title("🦙📄 DocuQuery Enhanced")
 
-# Provide Sample Questions Section on Main Page
-st.markdown("### 💡 Sample Questions You Can Ask")
-st.markdown("""
-Here are some examples of questions you can ask about your uploaded PDFs:
-- **Who is the author of this document?**
-- **What are the key points discussed in the document?**
-- **Summarize this document in a few sentences.**
-- **List important keywords or topics from this document.**
-- **Extract contact details like email or phone number from this document.**
-""")
-
-# Load or Create Vector Store
-db = None
+# Build or Load Vector Store
 if pdf_paths:
     if os.path.exists(VECTOR_DIR):
         shutil.rmtree(VECTOR_DIR)
-
-    with st.spinner("🔍 Indexing uploaded documents..."):
-        raw_docs = load_all_pdfs(pdf_paths)
-        chunks = split_docs(raw_docs, chunk_size=chunk_size, overlap=overlap)
-        db = create_store(chunks, VECTOR_DIR)
-        st.success("✅ Vector store created successfully.")
+    raw_docs = load_all_pdfs(pdf_paths)
+    chunks = split_docs(raw_docs, chunk_size=chunk_size, overlap=overlap)
+    st.session_state.db = create_store(chunks, VECTOR_DIR)
 else:
-    try:
-        db = load_store(VECTOR_DIR)
-        # st.success("✅ Loaded existing vector store.")
-    except FileNotFoundError:
-        st.warning("⚠️ Please upload at least one PDF to begin.")
-        st.stop()
+    if st.session_state.db is None:
+        try:
+            st.session_state.db = load_store(VECTOR_DIR)
+        except FileNotFoundError:
+            st.warning("Please upload at least one PDF to begin.")
+            st.stop()
 
-# Setup QA Chain using the new utility function
-qa_chain = get_qa_chain(db)
+qa_chain = get_qa_chain(st.session_state.db)
 
-# Chat Interface
-st.subheader("💬 Ask a question about your documents")
-query = st.text_input("Type your question here:")
-
+# 💬 Question Interface
+st.subheader("💬 Ask a Question")
+query = st.text_input("Enter your question:")
 if st.button("🔍 Get Answer") and query:
-    with st.spinner("🧠 Generating answer..."):
+    with st.spinner("Generating answer..."):
         smart_query = get_smart_prompt(query)
-
-        # Get the result from the QA chain
         try:
             result = qa_chain({"query": smart_query})
-            # Append the query and result to history
-            st.session_state.history.append({
-                'query': query,
-                'answer': result["result"]
-            })
+            st.session_state.history.append({"query": query, "answer": result["result"]})
 
             st.markdown("### 📚 Answer:")
-            st.write(result["result"])
+            st.code(result["result"])
 
-            with st.expander("📄 Source Snippets"):
-                for i, doc in enumerate(result["source_documents"]):
-                    metadata = extract_metadata(doc.metadata["source"])
-                    st.markdown(f"**Source {i+1}:**")
-                    st.write(doc.page_content)
-                    if metadata:
-                        st.write(metadata)
+            if enable_visual_qa:
+                with st.expander("📄 Source Snippets"):
+                    for i, doc in enumerate(result["source_documents"]):
+                        page_num = doc.metadata.get("page", "?")
+                        st.markdown(f"**Source {i+1} (Page {page_num}):**")
+                        st.write(doc.page_content)
+
+                        snippet_info = find_snippet_location(doc.page_content[:100], doc.metadata["source"])
+                        if snippet_info:
+                            image_bytes = render_highlighted_page(snippet_info["file_path"], snippet_info["page"], snippet_info["bbox"])
+                            image = Image.open(io.BytesIO(image_bytes))
+                            st.image(image, caption=f"Highlighted Snippet (Page {snippet_info['page'] + 1})")
+
         except Exception as e:
             st.error(f"An error occurred: {str(e)}")
 
-# Document Analysis Features (Tables, Charts, Sentiment Analysis)
+# 📊 Tables & Charts
 if analyze_tables:
-    st.header("📊 Extracted Tables")
+    st.subheader("📊 Extracted Tables")
     tables = extract_tables(pdf_paths)
     if tables:
         for i, table in enumerate(tables):
             st.markdown(f"**Table {i+1}:**")
-            st.write(table)
+            try:
+                df = pd.DataFrame(table[1:], columns=table[0])
+                st.dataframe(df, use_container_width=True)
+            except:
+                st.write(table)
     else:
-        st.warning("No tables found in the uploaded documents.")
+        st.info("No tables found.")
 
 if analyze_charts:
-    st.header("📈 Extracted Charts")
+    st.subheader("📈 Extracted Charts")
     charts = extract_charts(pdf_paths)
     if charts:
         for i, chart in enumerate(charts):
-            st.image(chart, caption=f"Chart {i+1}")
+            image = Image.open(io.BytesIO(chart))
+            image = image.resize((500, int(500 * image.height / image.width)))
+            st.image(image, caption=f"Chart {i+1}")
     else:
-        st.warning("No charts found in the uploaded documents.")
-        
-# Perform sentiment analysis if the checkbox is selected
-# if perform_sentiment_analysis:
-#     st.header("🧠 Sentiment Analysis")
-#     sentiment_results = analyze_sentiment(pdf_paths)  # Call the actual function
-#     for i, sentiment in enumerate(sentiment_results):
-#         doc_name = os.path.basename(pdf_paths[i])
-#         polarity = sentiment["polarity"]
-#         subjectivity = sentiment["subjectivity"]
-#         sentiment_label = "Positive" if polarity > 0 else "Negative" if polarity < 0 else "Neutral"
-#         st.markdown(f"**Document:** {doc_name}")
-#         st.markdown(f"- **Sentiment:** {sentiment_label}")
-#         st.markdown(f"- **Polarity:** {polarity:.2f}")
-#         st.markdown(f"- **Subjectivity:** {subjectivity:.2f}")
+        st.info("No charts found.")
 
-# Display past queries and answers
-if st.session_state.history:
-    with st.sidebar:
-        st.markdown("### 📜 Query History")
-        for i, entry in enumerate(st.session_state.history):
-            with st.expander(f"Query {i + 1}"):
-                st.markdown(f"**Question:** {entry['query']}")
-                st.markdown(f"**Answer:** {entry['answer']}")
+# 🧠 Sentiment Analysis
+if perform_sentiment_analysis and pdf_paths:
+    st.header("🧠 Sentiment Analysis (Page-wise)")
+    sentiment_data = analyze_sentiment_by_page(pdf_paths)
 
-# Cleanup uploaded files after processing (optional)
-if os.path.exists(UPLOAD_DIR):
-    shutil.rmtree(UPLOAD_DIR)
-    st.sidebar.success("✅ Temporary files cleaned up.")            
+    for doc_result in sentiment_data:
+        doc_name = os.path.basename(doc_result["file"])
+        page_sentiments = doc_result["pages"]
+
+        with st.expander(f"📄 Sentiment Insights for: {doc_name}"):
+            avg_polarity = sum(p["polarity"] for p in page_sentiments) / len(page_sentiments)
+            avg_subjectivity = sum(p["subjectivity"] for p in page_sentiments) / len(page_sentiments)
+            overall_sentiment = "Positive" if avg_polarity > 0.1 else "Negative" if avg_polarity < -0.1 else "Neutral"
+            sentiment_emoji = "😄" if overall_sentiment == "Positive" else "😞" if overall_sentiment == "Negative" else "😐"
+
+            st.markdown(f"""
+            <div style='padding: 0.5rem; background-color: #f0f2f6; border-radius: 10px;'>
+            <b>📄 File:</b> {doc_name}<br>
+            <b>📊 Overall Sentiment:</b> {overall_sentiment} {sentiment_emoji}<br>
+            <b>📈 Avg Polarity:</b> {avg_polarity:.2f} | <b>🌗 Avg Subjectivity:</b> {avg_subjectivity:.2f}
+            </div>
+            """, unsafe_allow_html=True)
+
+            flagged = [p for p in page_sentiments if abs(p["polarity"]) > 0.3]
+            if flagged:
+                st.markdown("**⚠️ Pages with strong sentiment:** " + ", ".join([f"Page {p['page']}" for p in flagged]))
+            else:
+                st.markdown("Sentiment is mostly neutral across pages.")
+
+            st.markdown("""
+            **Legend:**
+            - 📈 **Polarity**: Sentiment tone (−1 = negative, +1 = positive)
+            - 🌗 **Subjectivity**: Opinion level (0 = objective, 1 = subjective)
+            """)
+
+            fig, ax = plt.subplots()
+            pages = [p["page"] for p in page_sentiments]
+            polarities = [p["polarity"] for p in page_sentiments]
+            subjectivities = [p["subjectivity"] for p in page_sentiments]
+
+            ax.plot(pages, polarities, marker="o", label="📈 Polarity")
+            ax.plot(pages, subjectivities, marker="x", linestyle="--", label="🌗 Subjectivity")
+            ax.axhline(0, color="gray", linestyle=":", linewidth=1)
+            ax.set_xlabel("Page")
+            ax.set_ylabel("Score")
+            ax.set_title("Sentiment Scores per Page")
+            ax.legend()
+
+            st.pyplot(fig)
+
+            csv_data = pd.DataFrame(page_sentiments).to_csv(index=False)
+            st.download_button("📥 Download Sentiment Data as CSV", csv_data, file_name=f"{doc_name}_sentiment.csv")
+
+            if avg_polarity > 0.1:
+                st.success("✅ The document overall carries a positive tone.")
+            elif avg_polarity < -0.1:
+                st.error("⚠️ The document contains mostly negative sentiment.")
+            else:
+                st.info("ℹ️ The sentiment throughout the document is mostly neutral or objective.")

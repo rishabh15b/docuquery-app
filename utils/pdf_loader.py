@@ -1,6 +1,8 @@
 from langchain.document_loaders import PyMuPDFLoader
 import fitz  
 import pdfplumber
+import logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 def load_all_pdfs(file_paths):
     all_docs = []
@@ -13,7 +15,7 @@ def load_all_pdfs(file_paths):
                     doc.metadata["source"] = path
                     all_docs.append(doc)
         except Exception as e:
-            print(f"Error loading {path}: {str(e)}")
+            logging.error(f"Error in [FUNCTION NAME or FILE]: {str(e)}", exc_info=True)
     return all_docs
 
 def extract_metadata(file_path):
@@ -24,7 +26,7 @@ def extract_metadata(file_path):
         metadata["author"] = pdf_document.metadata.get("author", "Unknown Author")
         metadata["creation_date"] = pdf_document.metadata.get("creationDate", "Unknown Date")
     except Exception as e:
-        print(f"Error extracting metadata from {file_path}: {str(e)}")
+        logging.error(f"Error in [FUNCTION NAME or FILE]: {str(e)}", exc_info=True)
     return metadata
 
 
@@ -51,5 +53,22 @@ def extract_charts(file_paths):
                 charts.append(base_image["image"])
     return charts
 
+def find_snippet_location(text_snippet, file_path):
+    doc = fitz.open(file_path)
+    for page_number, page in enumerate(doc):
+        text_instances = page.search_for(text_snippet)
+        if text_instances:
+            return {
+                "page": page_number,
+                "bbox": text_instances[0],
+                "file_path": file_path
+            }
+    return None
 
-        
+
+def render_highlighted_page(file_path, page_num, bbox):
+    doc = fitz.open(file_path)
+    page = doc[page_num]
+    highlight = page.add_highlight_annot(bbox)
+    pix = page.get_pixmap(dpi=150)
+    return pix.tobytes("png")

@@ -48,65 +48,79 @@
 ## ⚙️ Installation
 
 ### Prerequisites
-1. Python 3.9 or higher.
-2. Ollama installed locally. [Install Ollama](https://ollama.com).
-3. Streamlit library installed.
+- Python 3.9+
+- [Ollama installed](https://ollama.com)
+- `streamlit` and other Python dependencies
 
-### Steps to Set Up the Project
+### Setup Instructions
 
-1. Clone the repository:
+```bash
+# 1. Clone the repo
 git clone https://github.com/rishabh15b/docuquery.git
 cd docuquery
 
-2. Create a virtual environment:
+# 2. Set up virtual environment
 python -m venv venv
-source venv/bin/activate # On Windows: venv\Scripts\activate
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-3. Install dependencies:
+# 3. Install dependencies
 pip install -r requirements.txt
 
-4. Pull the Mistral model:
-ollama pull mistral-small3.1 # Lightweight version with enhanced reasoning and long context support.
+# 4. Pull the model
+ollama pull mistral-small3.1
 
-5. Start the Streamlit app:
+# 5. Run the app
 streamlit run app.py
 
-6. Ensure Ollama server is running:
+# 6. Ensure Ollama server is running
 ollama serve
 
-7. Open the app in your browser at `http://localhost:8501`.
+7. Open [http://localhost:8501](http://localhost:8501) in your browser.
 
 ---
 
 ## 🧠 Usage
 
-1. Upload one or more PDF files through the sidebar.
-2. Adjust chunking settings (chunk size and overlap) as needed.
-3. Type your question in the input box (e.g., "Summarize this document").
-4. View the answer along with source document snippets.
-5. Access query history in the sidebar to review past interactions.
+1. **Upload** one or more PDF files using the sidebar.
+2. **Adjust** chunk size and overlap as needed.
+3. **Enable desired features:**
+   - 📊 **Table Extraction**
+   - 📈 **Chart Extraction**
+   - 🧠 **Sentiment Analysis**
+   - 🖍️ **Visual Source Highlighting**
+4. **Ask questions** like:
+   - "Who is the author?"
+   - "Summarize this document"
+   - "List the key points on page 3"
+5. **View** the LLM-generated answer with source highlights.
+6. **Download** sentiment analysis as a CSV file (if applicable).
 
 ---
 
 ## 🌟 Current Model: Mistral Small 3.1
 
-This project currently uses the **Mistral Small 3.1** model from Ollama, which offers:
+DocuQuery currently uses the **Mistral Small 3.1** model from Ollama, offering:
 
-- **Lightweight Deployment:** Runs efficiently on devices like a Mac with 32GB RAM or an RTX 4090 GPU.
-- **Enhanced Reasoning:** State-of-the-art reasoning capabilities, perfect for answering complex queries based on document content.
-- **Long Context Window:** Supports up to 128k tokens, making it ideal for analyzing large documents.
-- **Fast Response Times:** Provides quick conversational assistance with low latency.
+- 🧠 **Enhanced Reasoning** – Ideal for complex queries and summarization.
+- 🪶 **Lightweight Deployment** – Runs efficiently on devices like Macs, Linux, or Windows machines.
+- 📏 **Long Context Window** – Supports up to **128k tokens** for deep document understanding.
+- ⚡ **Fast Performance** – Provides responsive answers with low latency.
 
-For more details about Mistral Small 3.1, visit [Ollama Mistral Small 3.1](https://ollama.com/library/mistral-small3.1).
+🔗 [Learn more about Mistral Small 3.1](https://ollama.com/library/mistral-small3.1)
 
 ---
 
-## 🌟 Key Features to Add Next
+## 🔮 Upcoming Enhancements
 
-- **Multilingual Support:** Enable queries in multiple languages.
-- **Customizable Prompts:** Let users define query styles dynamically.
-- **Cloud Integration:** Allow users to upload files from Google Drive or Dropbox.
-- **Analytics Dashboard:** Display statistics about user activity and document usage.
+- 🧠 **Named Entity Recognition (NER)** using spaCy
+- 🧾 **Document Classification** (Resume, Legal, Invoice, etc.)
+- 📘 **Section-Based Navigation & Summarization**
+- 🌐 **Multilingual Query Support**
+- 🔧 **Model Selector** (switch between Mistral, GPT-4, Claude, etc.)
+- 📊 **Dashboard View** with tabs for:
+  - Sentiment Trends
+  - Extracted Tables
+  - Q&A History
 
 ---
 
@@ -114,14 +128,14 @@ For more details about Mistral Small 3.1, visit [Ollama Mistral Small 3.1](https
 
 We welcome contributions! To contribute:
 
-1. Fork the repository.
-2. Create a new branch:
-git checkout -b feature/<feature_name>
-3. Commit your changes:
-git commit -m "Add <feature_name>"
-4. Push to your branch:
-git push origin feature/<feature_name>
-5. Create a pull request.
+# Fork the repository
+git checkout -b feature/my-feature
+
+# Make your changes
+git commit -m "Add feature: my-feature"
+
+# Push and open a pull request
+git push origin feature/my-feature
 
 ---
 
