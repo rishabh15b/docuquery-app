@@ -83,7 +83,7 @@
 
 # 6. (In separate terminal) Start Ollama server
 - ollama serve
-
+```
 # 7. Open the app in your browser
 - Go to http://localhost:8501
 
