@@ -96,7 +96,6 @@
 3. Choose optional features: charts, tables, sentiment, highlighting.
 4. Ask questions using natural language.
 5. View answers with highlighted source, sentiment charts, and extracted data.
-6. Download sentiment results (CSV) if enabled.
 
 ---
 

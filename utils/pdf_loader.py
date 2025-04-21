@@ -2,6 +2,10 @@ from langchain.document_loaders import PyMuPDFLoader
 import fitz  
 import pdfplumber
 import logging
+from PIL import Image
+import io
+import pytesseract
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 def load_all_pdfs(file_paths):
@@ -52,6 +56,7 @@ def extract_charts(file_paths):
                 base_image = doc.extract_image(xref)
                 charts.append(base_image["image"])
     return charts
+
 
 def find_snippet_location(text_snippet, file_path):
     doc = fitz.open(file_path)

@@ -1,5 +1,3 @@
-# ✅ Full app.py Refactor for Better UI/UX
-
 import streamlit as st
 import os
 import shutil
@@ -15,6 +13,7 @@ from utils.prompt_router import get_smart_prompt
 from utils.rag_chain import get_qa_chain
 from utils.sentiment_analysis import analyze_sentiment_by_page
 from utils.pdf_highlight import find_snippet_location, render_highlighted_page
+from utils.ner import extract_named_entities
 
 UPLOAD_DIR = "uploaded_pdfs"
 VECTOR_DIR = "my_faiss_index"
@@ -34,7 +33,7 @@ if not st.session_state.visited:
         st.markdown("""
         Upload your PDFs and ask natural questions. DocuQuery will use AI to find answers,
         extract data, analyze tone, and more.
-        
+
         **Example questions:**
         - What is the document about?
         - Who authored this?
@@ -49,13 +48,14 @@ with st.sidebar:
     st.markdown("---")
 
     st.header("⚙️ Chunking Settings")
-    chunk_size = st.slider("Chunk Size", 500, 2000, 1000, 100)
+    chunk_size = st.slider("Chunk Size", 500, 2000, 800, 100)
     overlap = st.slider("Chunk Overlap", 0, 500, 200, 50)
 
     st.header("🧠 Analysis Options")
     analyze_tables = st.checkbox("📊 Extract Tables")
     analyze_charts = st.checkbox("📈 Extract Charts")
     perform_sentiment_analysis = st.checkbox("🧠 Sentiment Analysis")
+    perform_ner = st.checkbox("🔎 Named Entity Recognition")
     enable_visual_qa = st.checkbox("🖍️ Visual Highlighting", value=True)
 
     if st.button("🧹 Clear Uploaded Files"):
@@ -74,7 +74,8 @@ if uploaded_files:
     st.sidebar.success(f"Uploaded {len(uploaded_files)} file(s).")
 
 # Title
-st.title("🦙📄 DocuQuery Enhanced")
+st.markdown("### 🦙 DocuQuery")
+st.markdown("_Your AI assistant for smarter PDF understanding_")
 
 # Build or Load Vector Store
 if pdf_paths:
@@ -104,7 +105,21 @@ if st.button("🔍 Get Answer") and query:
             st.session_state.history.append({"query": query, "answer": result["result"]})
 
             st.markdown("### 📚 Answer:")
-            st.code(result["result"])
+            max_chars = 1200
+            if len(result["result"]) > max_chars:
+                display_text = result["result"][:max_chars] + "..._(truncated)_"
+            else:
+                display_text = result["result"]
+            st.markdown(display_text)
+
+            if perform_ner:
+                st.markdown("### 🔎 Named Entities")
+                entities = extract_named_entities([result["result"]])
+                if entities and entities[0]:
+                    for ent in entities[0]:
+                        st.markdown(f"- **{ent['text']}** ({ent['label']})")
+                else:
+                    st.info("No named entities detected in the answer.")
 
             if enable_visual_qa:
                 with st.expander("📄 Source Snippets"):
@@ -115,38 +130,13 @@ if st.button("🔍 Get Answer") and query:
 
                         snippet_info = find_snippet_location(doc.page_content[:100], doc.metadata["source"])
                         if snippet_info:
-                            image_bytes = render_highlighted_page(snippet_info["file_path"], snippet_info["page"], snippet_info["bbox"])
+                            image_bytes = render_highlighted_page(
+                                snippet_info["file_path"], snippet_info["page"], snippet_info["bbox"]
+                            )
                             image = Image.open(io.BytesIO(image_bytes))
                             st.image(image, caption=f"Highlighted Snippet (Page {snippet_info['page'] + 1})")
-
         except Exception as e:
             st.error(f"An error occurred: {str(e)}")
-
-# 📊 Tables & Charts
-if analyze_tables:
-    st.subheader("📊 Extracted Tables")
-    tables = extract_tables(pdf_paths)
-    if tables:
-        for i, table in enumerate(tables):
-            st.markdown(f"**Table {i+1}:**")
-            try:
-                df = pd.DataFrame(table[1:], columns=table[0])
-                st.dataframe(df, use_container_width=True)
-            except:
-                st.write(table)
-    else:
-        st.info("No tables found.")
-
-if analyze_charts:
-    st.subheader("📈 Extracted Charts")
-    charts = extract_charts(pdf_paths)
-    if charts:
-        for i, chart in enumerate(charts):
-            image = Image.open(io.BytesIO(chart))
-            image = image.resize((500, int(500 * image.height / image.width)))
-            st.image(image, caption=f"Chart {i+1}")
-    else:
-        st.info("No charts found.")
 
 # 🧠 Sentiment Analysis
 if perform_sentiment_analysis and pdf_paths:
@@ -207,3 +197,32 @@ if perform_sentiment_analysis and pdf_paths:
                 st.error("⚠️ The document contains mostly negative sentiment.")
             else:
                 st.info("ℹ️ The sentiment throughout the document is mostly neutral or objective.")
+
+# 📊 Tables & Charts
+if analyze_tables:
+    st.subheader("📊 Extracted Tables")
+    tables = extract_tables(pdf_paths)
+    if tables:
+        for i, table in enumerate(tables):
+            st.markdown(f"**Table {i+1}:**")
+            try:
+                df = pd.DataFrame(table[1:], columns=table[0])
+                st.dataframe(df, use_container_width=True)
+            except:
+                st.write(table)
+    else:
+        st.info("No tables found in the uploaded documents.")
+
+if analyze_charts:
+    st.subheader("📈 Extracted Charts")
+    charts = extract_charts(pdf_paths)
+    if charts:
+        for i, chart in enumerate(charts):
+            image = Image.open(io.BytesIO(chart))
+            width, height = image.size
+            max_width = 600
+            scale = max_width / width if width > max_width else 1.0
+            resized_image = image.resize((int(width * scale), int(height * scale)))
+            st.image(resized_image, caption=f"Chart {i+1}", use_column_width=False)
+    else:
+        st.info("No charts found in the uploaded documents.")
